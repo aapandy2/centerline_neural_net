@@ -8,7 +8,8 @@ from PIL import Image, ImageDraw
 mat = scipy.io.loadmat('/tigress/LEIFER/PanNeuronal/20180129/BrainScanner20180129_094932/BehaviorAnalysis/centerline.mat')
 
 num_images_to_load = 2000
-for j in range(0, num_images_to_load):
+step = 1
+for j in range(0, num_images_to_load, step):
 	#load image file
 	if(j % 500 == 0):
 		print 'loading image ', j, ' of ', num_images_to_load
@@ -51,21 +52,15 @@ for j in range(0, num_images_to_load):
 #	elif(j > num_images_to_load/2):
 #		test_data = test_data + ((img_flattened, coords_flattened),)
 
-#training_data1, validation_data1, test_data1 = mnist_loader.load_data_wrapper()
-
 #make training_data into a list
-#training_data = list(training_data)
-
 training_data = list(training_data)
 
-#print np.shape(training_data), np.shape(training_data1)
-
-net = network2.Network([300*300, 10, 10, 10], cost=network2.CrossEntropyCost)
-net.SGD(training_data, 5, 1, 0.07, monitor_training_cost=True)
-#net.SGD(training_data, 10, 50, 1.0, test_data=test_data)
+net = network2.Network([300*300, 20, 20, 10], cost=network2.CrossEntropyCost)
+net.SGD(training_data, 10, 1, 0.06, monitor_training_cost=True)
 
 for k in range(5):
-	test_image = int(np.random.rand(1) * np.size(training_data))
+#	test_image = int(np.random.rand(1) * (np.size(training_data)-1))
+	test_image = np.random.randint(low=0, high= int(num_images_to_load/step) )
 	print test_image
 	
 	#retrieve image from array
