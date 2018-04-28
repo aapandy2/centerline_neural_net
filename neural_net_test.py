@@ -67,19 +67,19 @@ def load_images(num_images_to_load, first_image_index, step):
 
 #load num_images_to_load, stepping through by step, starting at 
 #first_image_index
-num_images_to_load = 2000
+num_images_to_load = 10000
 step = 2
 first_image_index = 0
 training_data = load_images(num_images_to_load, first_image_index, step)
 
 #define net architecture and cost function
-net = network2.Network([300*300, 40, 40, 10], cost=network2.CrossEntropyCost)
+net = network2.Network([300*300, 50, 100, 10], cost=network2.CrossEntropyCost)
 
 #train net using training_data
-net.SGD(training_data, 50, 1, 0.065, monitor_training_cost=True)
+net.SGD(training_data, 20, 1, 0.06, monitor_training_cost=True)
 
 #generate test data
-num_test_images = 2000
+num_test_images = 10000
 test_step = 2
 test_data = load_images(num_test_images, 1, test_step)
 
