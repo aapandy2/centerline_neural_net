@@ -160,25 +160,24 @@ print model.predict(x_test)[0]
 print y_test[0]
 #model.save_weights('first_try.h5')
 
-#num_test_sample_images = 5
-#num_test_images = 2000
-#test_step = 2
-##for k in range(num_test_sample_images):
-#
-test_image = 0
-##choose random test image from test_data
-#test_image = np.random.randint(low=0, high= int(num_test_images/test_step) )
+num_test_sample_images = 5
+num_test_images = 2000
+test_step = 2
+for k in range(num_test_sample_images):
 
-#retrieve image from array and convert it to color to draw colored centerline
-img = Image.fromarray(np.reshape(x_test[0], (300, 300)) * 255).convert('RGBA')
-draw = ImageDraw.Draw(img)
-
-#generate net centerline and retrieve "true" centerline from array 
-#and convert them to tuples of (x, y) tuples for draw.line() below
-net_coords_tuple = tuple(map(tuple, np.reshape(np.array(model.predict(x_test))[test_image] * 300., (5, 2))))
-true_coords_tuple = tuple(map(tuple, np.reshape(np.array(y_test[test_image])*300., (5, 2))))
-
-#draw net centerline and "true" centerline on test image and show image
-draw.line(net_coords_tuple, fill=(0, 0, 255), width=2)
-draw.line(true_coords_tuple, fill=(255, 0, 0), width=2)
-img.show()
+	#choose random test image from test_data
+	test_image = np.random.randint(low=0, high= int(num_test_images/test_step) )
+	
+	#retrieve image from array and convert it to color to draw colored centerline
+	img = Image.fromarray(np.reshape(x_test[test_image], (300, 300)) * 255).convert('RGBA')
+	draw = ImageDraw.Draw(img)
+	
+	#generate net centerline and retrieve "true" centerline from array 
+	#and convert them to tuples of (x, y) tuples for draw.line() below
+	net_coords_tuple = tuple(map(tuple, np.reshape(np.array(model.predict(x_test))[test_image] * 300., (5, 2))))
+	true_coords_tuple = tuple(map(tuple, np.reshape(np.array(y_test[test_image])*300., (5, 2))))
+	
+	#draw net centerline and "true" centerline on test image and show image
+	draw.line(net_coords_tuple, fill=(0, 0, 255), width=2)
+	draw.line(true_coords_tuple, fill=(255, 0, 0), width=2)
+	img.show()
