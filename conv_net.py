@@ -60,13 +60,13 @@ def load_images(num_images_to_load, first_image_index, step):
                 image_data.append(img_flattened)
                 coords_data.append(coords_flattened[0])
 
-        combined_data = [np.array(image_data), np.array(coords_data)]
+        combined_data = [np.array(image_data).reshape((num_images_to_load/step, 300, 300)), np.array(coords_data)]
 
         return combined_data
 
 #load num_images_to_load, stepping through by step, starting at 
 #first_image_index
-num_images_to_load = 10000
+num_images_to_load = 1000
 step = 2
 first_image_index = 0
 training_data = load_images(num_images_to_load, first_image_index, step)
@@ -75,7 +75,7 @@ test_data     = load_images(num_images_to_load, 1, 2)
 #training parameters
 batch_size = 1
 num_classes = 10
-epochs = 10
+epochs = 20
 
 # input image dimensions
 img_x, img_y = 300, 300
@@ -90,11 +90,30 @@ print('x_train shape:', x_train.shape)
 print(x_train.shape[0], 'train samples')
 print(x_test.shape[0], 'test samples')
 
+x_train = x_train.reshape(x_train.shape[0], img_x, img_y, 1)
+x_test  = x_test.reshape(x_test.shape[0], img_x, img_y, 1)
+input_shape = (img_x, img_y, 1)
+
 #my neural net model
+#model = Sequential()
+#model.add(Dense(20, input_shape=(90000,), activation='sigmoid'))
+#model.add(Dense(20, activation='sigmoid'))
+#model.add(Dense(10, activation='sigmoid'))
+
 model = Sequential()
-model.add(Dense(20, input_shape=(90000,), activation='sigmoid'))
+model.add(Conv2D(32, kernel_size=(5, 5), strides=(1, 1),
+                 activation='sigmoid',
+                 input_shape=input_shape))
+model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+model.add(Conv2D(64, (5, 5), activation='sigmoid'))
+model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(Flatten())
 model.add(Dense(20, activation='sigmoid'))
-model.add(Dense(10, activation='sigmoid'))
+model.add(Dense(num_classes, activation='sigmoid'))
+
+#model.compile(loss=keras.losses.categorical_crossentropy,
+#              optimizer=keras.optimizers.Adam())#,
+#             metrics=['accuracy'])
 
 model.compile(loss=keras.losses.binary_crossentropy,
 #              optimizer=keras.optimizers.Adam())
