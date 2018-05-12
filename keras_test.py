@@ -66,16 +66,16 @@ def load_images(num_images_to_load, first_image_index, step):
 
 #load num_images_to_load, stepping through by step, starting at 
 #first_image_index
-num_images_to_load = 10000
-step = 2
+num_images_to_load = 40000
+step = 40
 first_image_index = 0
 training_data = load_images(num_images_to_load, first_image_index, step)
-test_data     = load_images(num_images_to_load, 1, 2)
+test_data     = load_images(num_images_to_load, 1, step)
 
 #training parameters
 batch_size = 1
 num_classes = 10
-epochs = 10
+epochs = 20
 
 # input image dimensions
 img_x, img_y = 300, 300
@@ -92,13 +92,14 @@ print(x_test.shape[0], 'test samples')
 
 #my neural net model
 model = Sequential()
-model.add(Dense(20, input_shape=(90000,), activation='sigmoid'))
+model.add(Dense(200, input_shape=(90000,), activation='relu'))
 model.add(Dense(20, activation='sigmoid'))
 model.add(Dense(10, activation='sigmoid'))
 
 model.compile(loss=keras.losses.binary_crossentropy,
-#              optimizer=keras.optimizers.Adam())
-	      optimizer=keras.optimizers.SGD(lr=0.30))
+#	      optimizer='rmsprop')
+              optimizer=keras.optimizers.Adam())
+#	      optimizer=keras.optimizers.SGD(lr=0.30))
 
 
 class AccuracyHistory(keras.callbacks.Callback):

@@ -66,16 +66,16 @@ def load_images(num_images_to_load, first_image_index, step):
 
 #load num_images_to_load, stepping through by step, starting at 
 #first_image_index
-num_images_to_load = 1000
+num_images_to_load = 41000
 step = 2
 first_image_index = 0
 training_data = load_images(num_images_to_load, first_image_index, step)
-test_data     = load_images(num_images_to_load, 1, 2)
+test_data     = load_images(num_images_to_load, 1, step)
 
 #training parameters
 batch_size = 1
 num_classes = 10
-epochs = 20
+epochs = 3
 
 # input image dimensions
 img_x, img_y = 300, 300
@@ -94,30 +94,23 @@ x_train = x_train.reshape(x_train.shape[0], img_x, img_y, 1)
 x_test  = x_test.reshape(x_test.shape[0], img_x, img_y, 1)
 input_shape = (img_x, img_y, 1)
 
-#my neural net model
-#model = Sequential()
-#model.add(Dense(20, input_shape=(90000,), activation='sigmoid'))
-#model.add(Dense(20, activation='sigmoid'))
-#model.add(Dense(10, activation='sigmoid'))
-
 model = Sequential()
-model.add(Conv2D(32, kernel_size=(5, 5), strides=(1, 1),
-                 activation='sigmoid',
+model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
+                 activation='relu',
                  input_shape=input_shape))
+#keras.layers.Dropout(0.1, noise_shape=None, seed=None)
 model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-model.add(Conv2D(64, (5, 5), activation='sigmoid'))
+model.add(Conv2D(32, kernel_size=(3, 3), activation='relu'))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Flatten())
-model.add(Dense(20, activation='sigmoid'))
+model.add(Dense(128, activation='sigmoid'))
+#model.add(Dense(128, activation='sigmoid'))
 model.add(Dense(num_classes, activation='sigmoid'))
 
-#model.compile(loss=keras.losses.categorical_crossentropy,
-#              optimizer=keras.optimizers.Adam())#,
-#             metrics=['accuracy'])
-
 model.compile(loss=keras.losses.binary_crossentropy,
-#              optimizer=keras.optimizers.Adam())
-	      optimizer=keras.optimizers.SGD(lr=0.30))
+#	      optimizer='rmsprop')
+              optimizer=keras.optimizers.Adam())
+#	      optimizer=keras.optimizers.SGD(lr=0.30))
 
 
 class AccuracyHistory(keras.callbacks.Callback):
