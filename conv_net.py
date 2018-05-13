@@ -66,7 +66,7 @@ def load_images(num_images_to_load, first_image_index, step):
 
 #load num_images_to_load, stepping through by step, starting at 
 #first_image_index
-num_images_to_load = 41000
+num_images_to_load = 100
 step = 2
 first_image_index = 0
 training_data = load_images(num_images_to_load, first_image_index, step)
@@ -132,9 +132,12 @@ model.fit(x_train, y_train,
 #print y_test[0]
 #model.save_weights('first_try.h5')
 
-num_test_sample_images = 5
+num_test_sample_images = 2
 num_test_images = num_images_to_load
 test_step = 2
+
+predictions = np.array(model.predict(x_test)) * 300.
+
 for k in range(num_test_sample_images):
 
 	#choose random test image from test_data
@@ -146,10 +149,16 @@ for k in range(num_test_sample_images):
 	
 	#generate net centerline and retrieve "true" centerline from array 
 	#and convert them to tuples of (x, y) tuples for draw.line() below
-	net_coords_tuple = tuple(map(tuple, np.reshape(np.array(model.predict(x_test))[test_image] * 300., (5, 2))))
+	net_coords_tuple = tuple(map(tuple, np.reshape(predictions[test_image], (5, 2))))
+#	net_coords_tuple = tuple(map(tuple, np.reshape(np.array(model.predict(x_test))[test_image] * 300., (5, 2))))
 	true_coords_tuple = tuple(map(tuple, np.reshape(np.array(y_test[test_image])*300., (5, 2))))
 	
 	#draw net centerline and "true" centerline on test image and show image
 	draw.line(net_coords_tuple, fill=(0, 0, 255), width=2)
 	draw.line(true_coords_tuple, fill=(255, 0, 0), width=2)
-	img.show()
+#	img.show()
+	img.save('output_' + str(k) + '.png')
+
+import tensorflow as tf
+tf.reset_default_graph()
+keras.backend.clear_session()
