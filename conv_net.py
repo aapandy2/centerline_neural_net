@@ -5,8 +5,14 @@ from keras.datasets import mnist
 from keras.layers import Dense, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 from keras.models import Sequential
+from keras.models import load_model
 from PIL import Image, ImageDraw
 import numpy as np
+
+#choose whether to train new model or load existing model
+TRAIN_MODEL = 0
+LOAD_MODEL  = 1
+mode = LOAD_MODEL
 
 #load in .mat file as python dictionary
 mat = scipy.io.loadmat('../centerline.mat')
@@ -66,8 +72,8 @@ def load_images(num_images_to_load, first_image_index, step):
 
 #load num_images_to_load, stepping through by step, starting at 
 #first_image_index
-num_images_to_load = 100
-step = 2
+num_images_to_load = 41000
+step = 1000
 first_image_index = 0
 training_data = load_images(num_images_to_load, first_image_index, step)
 test_data     = load_images(num_images_to_load, 1, step)
@@ -80,7 +86,7 @@ epochs = 3
 # input image dimensions
 img_x, img_y = 300, 300
 
-x_train, y_train = training_data
+#x_train, y_train = training_data
 x_test, y_test   = test_data
 
 # convert the data to the right type
@@ -90,51 +96,57 @@ print('x_train shape:', x_train.shape)
 print(x_train.shape[0], 'train samples')
 print(x_test.shape[0], 'test samples')
 
-x_train = x_train.reshape(x_train.shape[0], img_x, img_y, 1)
+#x_train = x_train.reshape(x_train.shape[0], img_x, img_y, 1)
 x_test  = x_test.reshape(x_test.shape[0], img_x, img_y, 1)
 input_shape = (img_x, img_y, 1)
 
-model = Sequential()
-model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
-                 activation='relu',
-                 input_shape=input_shape))
-#keras.layers.Dropout(0.1, noise_shape=None, seed=None)
-model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-model.add(Conv2D(32, kernel_size=(3, 3), activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Flatten())
-model.add(Dense(128, activation='sigmoid'))
-#model.add(Dense(128, activation='sigmoid'))
-model.add(Dense(num_classes, activation='sigmoid'))
 
-model.compile(loss=keras.losses.binary_crossentropy,
-#	      optimizer='rmsprop')
-              optimizer=keras.optimizers.Adam())
-#	      optimizer=keras.optimizers.SGD(lr=0.30))
+if(mode == TRAIN_MODEL):
+	model = Sequential()
+	model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
+	                 activation='relu',
+	                 input_shape=input_shape))
+	#keras.layers.Dropout(0.1, noise_shape=None, seed=None)
+	model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+	model.add(Conv2D(32, kernel_size=(3, 3), activation='relu'))
+	model.add(MaxPooling2D(pool_size=(2, 2)))
+	model.add(Flatten())
+	model.add(Dense(128, activation='sigmoid'))
+	#model.add(Dense(128, activation='sigmoid'))
+	model.add(Dense(num_classes, activation='sigmoid'))
+	
+	model.compile(loss=keras.losses.binary_crossentropy,
+	#	      optimizer='rmsprop')
+	              optimizer=keras.optimizers.Adam())
+	#	      optimizer=keras.optimizers.SGD(lr=0.30))
+	
+	
+	class AccuracyHistory(keras.callbacks.Callback):
+	    def on_train_begin(self, logs={}):
+	        self.acc = []
+	
+	    def on_epoch_end(self, batch, logs={}):
+	        self.acc.append(logs.get('acc'))
+	
+	history = AccuracyHistory()
+	
+	model.fit(x_train, y_train,
+	          batch_size=batch_size,
+	          epochs=epochs,
+	          verbose=1,
+	          callbacks=[history])
+	
+	# Creates a HDF5 file 'my_model.h5'
+	model.save('my_model.h5')
 
 
-class AccuracyHistory(keras.callbacks.Callback):
-    def on_train_begin(self, logs={}):
-        self.acc = []
+if(mode == LOAD_MODEL):
+	# Returns a compiled model identical to the previous one
+	model = load_model('my_model.h5')
 
-    def on_epoch_end(self, batch, logs={}):
-        self.acc.append(logs.get('acc'))
-
-history = AccuracyHistory()
-
-model.fit(x_train, y_train,
-          batch_size=batch_size,
-          epochs=epochs,
-          verbose=1,
-          callbacks=[history])
-
-#print model.predict(x_test)[0]
-#print y_test[0]
-#model.save_weights('first_try.h5')
-
-num_test_sample_images = 2
+num_test_sample_images = 20
 num_test_images = num_images_to_load
-test_step = 2
+test_step = step
 
 predictions = np.array(model.predict(x_test)) * 300.
 
