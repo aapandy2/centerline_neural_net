@@ -15,7 +15,9 @@ LOAD_MODEL  = 1
 mode = LOAD_MODEL
 
 #load in .mat file as python dictionary
-mat = scipy.io.loadmat('../centerline.mat')
+frames_directory = '../cam1_frames_30Hz_scaled/'
+#frames_directory = '../cam1_frames_scaled_0430/' #testing different data file
+mat = scipy.io.loadmat(frames_directory + 'centerline.mat')
 
 #define a function which loads images and centerlines into an array;
 #the array has shape (image_array, centerline_array), where both
@@ -29,7 +31,6 @@ def load_images(num_images_to_load, first_image_index, step):
                 if(j % 500 == 0):
                         print 'loading image ', first_image_index + j, ' of ', first_image_index + num_images_to_load
                 frame_number = j + first_image_index
-                frames_directory = '../cam1_frames_30Hz_scaled/'
                 frame = frames_directory + 'cam1_frames_' + '%05d'%frame_number + '_scaled.png'
 
                 #PIL makes the origin of the coordinate system the upper-left 
@@ -58,7 +59,6 @@ def load_images(num_images_to_load, first_image_index, step):
                 img_loaded = Image.open(frame)
                 coords_flattened = np.array(coords_np[1::20]).flatten() / 300.
 		img_flattened    = np.array(img_loaded).flatten() / 255.
-#                img_flattened    = np.array(img_loaded) / 255.
 
                 #reshape flattened coords array to be 1D columns (net input format)
                 coords_flattened = np.reshape(coords_flattened, (1, 10))
@@ -72,8 +72,8 @@ def load_images(num_images_to_load, first_image_index, step):
 
 #load num_images_to_load, stepping through by step, starting at 
 #first_image_index
-num_images_to_load = 41000
-step = 1000
+num_images_to_load = 2000
+step = 2
 first_image_index = 0
 training_data = load_images(num_images_to_load, first_image_index, step)
 test_data     = load_images(num_images_to_load, 1, step)
@@ -86,7 +86,7 @@ epochs = 3
 # input image dimensions
 img_x, img_y = 300, 300
 
-#x_train, y_train = training_data
+x_train, y_train = training_data
 x_test, y_test   = test_data
 
 # convert the data to the right type
@@ -96,7 +96,7 @@ print('x_train shape:', x_train.shape)
 print(x_train.shape[0], 'train samples')
 print(x_test.shape[0], 'test samples')
 
-#x_train = x_train.reshape(x_train.shape[0], img_x, img_y, 1)
+x_train = x_train.reshape(x_train.shape[0], img_x, img_y, 1)
 x_test  = x_test.reshape(x_test.shape[0], img_x, img_y, 1)
 input_shape = (img_x, img_y, 1)
 
@@ -106,17 +106,14 @@ if(mode == TRAIN_MODEL):
 	model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
 	                 activation='relu',
 	                 input_shape=input_shape))
-	#keras.layers.Dropout(0.1, noise_shape=None, seed=None)
 	model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
 	model.add(Conv2D(32, kernel_size=(3, 3), activation='relu'))
 	model.add(MaxPooling2D(pool_size=(2, 2)))
 	model.add(Flatten())
 	model.add(Dense(128, activation='sigmoid'))
-	#model.add(Dense(128, activation='sigmoid'))
 	model.add(Dense(num_classes, activation='sigmoid'))
 	
 	model.compile(loss=keras.losses.binary_crossentropy,
-	#	      optimizer='rmsprop')
 	              optimizer=keras.optimizers.Adam())
 	#	      optimizer=keras.optimizers.SGD(lr=0.30))
 	
@@ -136,8 +133,8 @@ if(mode == TRAIN_MODEL):
 	          verbose=1,
 	          callbacks=[history])
 	
-	# Creates a HDF5 file 'my_model.h5'
-	model.save('my_model.h5')
+	# Creates a HDF5 file 'my_model1.h5'
+	model.save('my_model1.h5')
 
 
 if(mode == LOAD_MODEL):
@@ -150,6 +147,8 @@ test_step = step
 
 predictions = np.array(model.predict(x_test)) * 300.
 
+#pulls num_test_sample_images from test_data, draws both predicted line (blue)
+#and known centerline (red)
 for k in range(num_test_sample_images):
 
 	#choose random test image from test_data
@@ -162,7 +161,7 @@ for k in range(num_test_sample_images):
 	#generate net centerline and retrieve "true" centerline from array 
 	#and convert them to tuples of (x, y) tuples for draw.line() below
 	net_coords_tuple = tuple(map(tuple, np.reshape(predictions[test_image], (5, 2))))
-#	net_coords_tuple = tuple(map(tuple, np.reshape(np.array(model.predict(x_test))[test_image] * 300., (5, 2))))
+	net_coords_tuple = tuple(map(tuple, np.reshape(np.array(model.predict(x_test))[test_image] * 300., (5, 2))))
 	true_coords_tuple = tuple(map(tuple, np.reshape(np.array(y_test[test_image])*300., (5, 2))))
 	
 	#draw net centerline and "true" centerline on test image and show image
@@ -171,6 +170,7 @@ for k in range(num_test_sample_images):
 #	img.show()
 	img.save('output_' + str(k) + '.png')
 
+#clear the data tensorflow saves about old models
 import tensorflow as tf
 tf.reset_default_graph()
 keras.backend.clear_session()
