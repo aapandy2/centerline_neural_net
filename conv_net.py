@@ -15,7 +15,8 @@ LOAD_MODEL  = 1
 mode = LOAD_MODEL
 
 #load in .mat file as python dictionary
-frames_directory = '../cam1_frames_30Hz_scaled/'
+frames_directory = '../cam1_frames_resized/'
+#frames_directory = '../cam1_frames_30Hz_scaled/'
 #frames_directory = '../cam1_frames_scaled_0430/' #testing different data file
 mat = scipy.io.loadmat(frames_directory + 'centerline.mat')
 
@@ -72,11 +73,11 @@ def load_images(num_images_to_load, first_image_index, step):
 
 #load num_images_to_load, stepping through by step, starting at 
 #first_image_index
-num_images_to_load = 2000
-step = 2
+num_images_to_load = 26000
+step = 100
 first_image_index = 0
 training_data = load_images(num_images_to_load, first_image_index, step)
-test_data     = load_images(num_images_to_load, 1, step)
+#test_data     = load_images(num_images_to_load, 1, step)
 
 #training parameters
 batch_size = 1
@@ -87,17 +88,17 @@ epochs = 3
 img_x, img_y = 300, 300
 
 x_train, y_train = training_data
-x_test, y_test   = test_data
+#x_test, y_test   = test_data
 
 # convert the data to the right type
 x_train = x_train.astype('float32')
-x_test = x_test.astype('float32')
+#x_test = x_test.astype('float32')
 print('x_train shape:', x_train.shape)
 print(x_train.shape[0], 'train samples')
-print(x_test.shape[0], 'test samples')
+#print(x_test.shape[0], 'test samples')
 
 x_train = x_train.reshape(x_train.shape[0], img_x, img_y, 1)
-x_test  = x_test.reshape(x_test.shape[0], img_x, img_y, 1)
+#x_test  = x_test.reshape(x_test.shape[0], img_x, img_y, 1)
 input_shape = (img_x, img_y, 1)
 
 
@@ -134,41 +135,46 @@ if(mode == TRAIN_MODEL):
 	          callbacks=[history])
 	
 	# Creates a HDF5 file 'my_model1.h5'
-	model.save('my_model1.h5')
+	model.save('my_model_0510.h5')
 
 
 if(mode == LOAD_MODEL):
 	# Returns a compiled model identical to the previous one
-	model = load_model('my_model.h5')
+	model = load_model('my_model_0510.h5')
 
-num_test_sample_images = 20
-num_test_images = num_images_to_load
-test_step = step
+	test_data     = load_images(num_images_to_load, 1, step)
+	x_test, y_test   = test_data
+	x_test = x_test.astype('float32')
+	x_test  = x_test.reshape(x_test.shape[0], img_x, img_y, 1)	
 
-predictions = np.array(model.predict(x_test)) * 300.
-
-#pulls num_test_sample_images from test_data, draws both predicted line (blue)
-#and known centerline (red)
-for k in range(num_test_sample_images):
-
-	#choose random test image from test_data
-	test_image = np.random.randint(low=0, high= int(num_test_images/test_step) )
+	num_test_sample_images = 5
+	num_test_images = num_images_to_load
+	test_step = step
 	
-	#retrieve image from array and convert it to color to draw colored centerline
-	img = Image.fromarray(np.reshape(x_test[test_image], (300, 300)) * 255).convert('RGBA')
-	draw = ImageDraw.Draw(img)
+	predictions = np.array(model.predict(x_test)) * 300.
 	
-	#generate net centerline and retrieve "true" centerline from array 
-	#and convert them to tuples of (x, y) tuples for draw.line() below
-	net_coords_tuple = tuple(map(tuple, np.reshape(predictions[test_image], (5, 2))))
-	net_coords_tuple = tuple(map(tuple, np.reshape(np.array(model.predict(x_test))[test_image] * 300., (5, 2))))
-	true_coords_tuple = tuple(map(tuple, np.reshape(np.array(y_test[test_image])*300., (5, 2))))
+	#pulls num_test_sample_images from test_data, draws both predicted line (blue)
+	#and known centerline (red)
+	for k in range(num_test_sample_images):
 	
-	#draw net centerline and "true" centerline on test image and show image
-	draw.line(net_coords_tuple, fill=(0, 0, 255), width=2)
-	draw.line(true_coords_tuple, fill=(255, 0, 0), width=2)
-#	img.show()
-	img.save('output_' + str(k) + '.png')
+		#choose random test image from test_data
+		test_image = np.random.randint(low=0, high= int(num_test_images/test_step) )
+		
+		#retrieve image from array and convert it to color to draw colored centerline
+		img = Image.fromarray(np.reshape(x_test[test_image], (300, 300)) * 255).convert('RGBA')
+		draw = ImageDraw.Draw(img)
+		
+		#generate net centerline and retrieve "true" centerline from array 
+		#and convert them to tuples of (x, y) tuples for draw.line() below
+		net_coords_tuple = tuple(map(tuple, np.reshape(predictions[test_image], (5, 2))))
+		net_coords_tuple = tuple(map(tuple, np.reshape(np.array(model.predict(x_test))[test_image] * 300., (5, 2))))
+		true_coords_tuple = tuple(map(tuple, np.reshape(np.array(y_test[test_image])*300., (5, 2))))
+		
+		#draw net centerline and "true" centerline on test image and show image
+		draw.line(net_coords_tuple, fill=(0, 0, 255), width=2)
+		draw.line(true_coords_tuple, fill=(255, 0, 0), width=2)
+	#	img.show()
+		img.save('output_' + str(k) + '.png')
 
 #clear the data tensorflow saves about old models
 import tensorflow as tf
