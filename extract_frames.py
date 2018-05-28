@@ -3,7 +3,8 @@ import os
 from PIL import Image, ImageDraw
 import numpy
 
-LowMag_directory = '/tigress/LEIFER/PanNeuronal/20180510/BrainScanner20180510_105546/LowMagBrain20180510_105558/'
+#LowMag_directory = '/tigress/LEIFER/PanNeuronal/20180510/BrainScanner20180510_105546/LowMagBrain20180510_105558/'
+LowMag_directory = '/tigress/LEIFER/PanNeuronal/20180511/BrainScanner20180511_134913/LowMagBrain20180511_134913/'
 
 #from https://stackoverflow.com/questions/3844430/how-to-get-the-duration-of-a-video-in-python
 def getLength(filename):

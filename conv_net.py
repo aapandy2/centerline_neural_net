@@ -12,13 +12,16 @@ import numpy as np
 #choose whether to train new model or load existing model
 TRAIN_MODEL = 0
 LOAD_MODEL  = 1
-mode = LOAD_MODEL
+mode = TRAIN_MODEL
 
 #load in .mat file as python dictionary
+#frames_directory = '../cam1_frames_resized_test/'
 frames_directory = '../cam1_frames_resized/'
 #frames_directory = '../cam1_frames_30Hz_scaled/'
 #frames_directory = '../cam1_frames_scaled_0430/' #testing different data file
 mat = scipy.io.loadmat(frames_directory + 'centerline.mat')
+
+num_classes = 20
 
 #define a function which loads images and centerlines into an array;
 #the array has shape (image_array, centerline_array), where both
@@ -58,11 +61,11 @@ def load_images(num_images_to_load, first_image_index, step):
                 #and scale both image and coords to be in range [0, 1]
                 #(all neurons in net have range [0, 1])
                 img_loaded = Image.open(frame)
-                coords_flattened = np.array(coords_np[1::20]).flatten() / 300.
+                coords_flattened = np.array(coords_np[1::(100/(num_classes/2))]).flatten() / 300.
 		img_flattened    = np.array(img_loaded).flatten() / 255.
 
                 #reshape flattened coords array to be 1D columns (net input format)
-                coords_flattened = np.reshape(coords_flattened, (1, 10))
+                coords_flattened = np.reshape(coords_flattened, (1, num_classes))
 
                 image_data.append(img_flattened)
                 coords_data.append(coords_flattened[0])
@@ -73,36 +76,31 @@ def load_images(num_images_to_load, first_image_index, step):
 
 #load num_images_to_load, stepping through by step, starting at 
 #first_image_index
-num_images_to_load = 26000
+num_images_to_load = 27000
 step = 100
 first_image_index = 0
-training_data = load_images(num_images_to_load, first_image_index, step)
-#test_data     = load_images(num_images_to_load, 1, step)
-
-#training parameters
-batch_size = 1
-num_classes = 10
-epochs = 3
 
 # input image dimensions
 img_x, img_y = 300, 300
 
-x_train, y_train = training_data
-#x_test, y_test   = test_data
-
-# convert the data to the right type
-x_train = x_train.astype('float32')
-#x_test = x_test.astype('float32')
-print('x_train shape:', x_train.shape)
-print(x_train.shape[0], 'train samples')
-#print(x_test.shape[0], 'test samples')
-
-x_train = x_train.reshape(x_train.shape[0], img_x, img_y, 1)
-#x_test  = x_test.reshape(x_test.shape[0], img_x, img_y, 1)
-input_shape = (img_x, img_y, 1)
-
-
 if(mode == TRAIN_MODEL):
+	training_data = load_images(num_images_to_load, first_image_index, step)
+	
+	#training parameters
+	batch_size = 1
+	epochs = 3
+	
+	x_train, y_train = training_data
+	
+	# convert the data to the right type
+	x_train = x_train.astype('float32')
+	print('x_train shape:', x_train.shape)
+	print(x_train.shape[0], 'train samples')
+	
+	x_train = x_train.reshape(x_train.shape[0], img_x, img_y, 1)
+	input_shape = (img_x, img_y, 1)	
+
+
 	model = Sequential()
 	model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
 	                 activation='relu',
@@ -135,7 +133,7 @@ if(mode == TRAIN_MODEL):
 	          callbacks=[history])
 	
 	# Creates a HDF5 file 'my_model1.h5'
-	model.save('my_model_0510.h5')
+	model.save('my_model_retrain.h5')
 
 
 if(mode == LOAD_MODEL):
@@ -147,7 +145,7 @@ if(mode == LOAD_MODEL):
 	x_test = x_test.astype('float32')
 	x_test  = x_test.reshape(x_test.shape[0], img_x, img_y, 1)	
 
-	num_test_sample_images = 5
+	num_test_sample_images = 20
 	num_test_images = num_images_to_load
 	test_step = step
 	
@@ -166,9 +164,9 @@ if(mode == LOAD_MODEL):
 		
 		#generate net centerline and retrieve "true" centerline from array 
 		#and convert them to tuples of (x, y) tuples for draw.line() below
-		net_coords_tuple = tuple(map(tuple, np.reshape(predictions[test_image], (5, 2))))
-		net_coords_tuple = tuple(map(tuple, np.reshape(np.array(model.predict(x_test))[test_image] * 300., (5, 2))))
-		true_coords_tuple = tuple(map(tuple, np.reshape(np.array(y_test[test_image])*300., (5, 2))))
+		net_coords_tuple = tuple(map(tuple, np.reshape(predictions[test_image], (num_classes/2, 2))))
+		net_coords_tuple = tuple(map(tuple, np.reshape(np.array(model.predict(x_test))[test_image] * 300., (num_classes/2, 2))))
+		true_coords_tuple = tuple(map(tuple, np.reshape(np.array(y_test[test_image])*300., (num_classes/2, 2))))
 		
 		#draw net centerline and "true" centerline on test image and show image
 		draw.line(net_coords_tuple, fill=(0, 0, 255), width=2)
