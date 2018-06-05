@@ -10,13 +10,15 @@ from PIL import Image, ImageDraw
 import numpy as np
 
 #choose whether to train new model or load existing model
-TRAIN_MODEL = 0
-LOAD_MODEL  = 1
-mode = TRAIN_MODEL
+TRAIN_MODEL        = 0
+LOAD_MODEL         = 1
+TRAIN_LOADED_MODEL = 2
+mode = LOAD_MODEL
+model_name = 'retrained_model.h5'
 
 #load in .mat file as python dictionary
-#frames_directory = '../cam1_frames_resized_test/'
-frames_directory = '../cam1_frames_resized/'
+#frames_directory = '../cam1_frames_resized/'
+frames_directory = '../cam1_frames_resized_test/'
 #frames_directory = '../cam1_frames_30Hz_scaled/'
 #frames_directory = '../cam1_frames_scaled_0430/' #testing different data file
 mat = scipy.io.loadmat(frames_directory + 'centerline.mat')
@@ -76,19 +78,19 @@ def load_images(num_images_to_load, first_image_index, step):
 
 #load num_images_to_load, stepping through by step, starting at 
 #first_image_index
-num_images_to_load = 27000
+num_images_to_load = 33700
 step = 100
 first_image_index = 0
+
+#training parameters
+batch_size = 1
+epochs = 10
 
 # input image dimensions
 img_x, img_y = 300, 300
 
 if(mode == TRAIN_MODEL):
 	training_data = load_images(num_images_to_load, first_image_index, step)
-	
-	#training parameters
-	batch_size = 1
-	epochs = 3
 	
 	x_train, y_train = training_data
 	
@@ -133,12 +135,56 @@ if(mode == TRAIN_MODEL):
 	          callbacks=[history])
 	
 	# Creates a HDF5 file 'my_model1.h5'
-	model.save('my_model_retrain.h5')
+#	model.save('my_model_retrain.h5')
+	model.save(model_name)
 
+
+if(mode == TRAIN_LOADED_MODEL):
+        training_data = load_images(num_images_to_load, first_image_index, step)
+
+        #training parameters
+#        batch_size = 1
+#        epochs = 3
+
+        x_train, y_train = training_data
+
+        # convert the data to the right type
+        x_train = x_train.astype('float32')
+        print('x_train shape:', x_train.shape)
+        print(x_train.shape[0], 'train samples')
+
+        x_train = x_train.reshape(x_train.shape[0], img_x, img_y, 1)
+        input_shape = (img_x, img_y, 1)
+
+        model = load_model(model_name)
+
+        model.compile(loss=keras.losses.binary_crossentropy,
+                      optimizer=keras.optimizers.Adam())
+        #             optimizer=keras.optimizers.SGD(lr=0.30))
+
+
+        class AccuracyHistory(keras.callbacks.Callback):
+            def on_train_begin(self, logs={}):
+                self.acc = []
+
+            def on_epoch_end(self, batch, logs={}):
+                self.acc.append(logs.get('acc'))
+
+        history = AccuracyHistory()
+
+        model.fit(x_train, y_train,
+                  batch_size=batch_size,
+                  epochs=epochs,
+                  verbose=1,
+                  callbacks=[history])
+
+        # Creates a HDF5 file 'my_model1.h5'
+        model.save(model_name)
 
 if(mode == LOAD_MODEL):
 	# Returns a compiled model identical to the previous one
-	model = load_model('my_model_0510.h5')
+#	model = load_model('my_model_0510.h5')
+	model = load_model(model_name)
 
 	test_data     = load_images(num_images_to_load, 1, step)
 	x_test, y_test   = test_data
