@@ -167,7 +167,6 @@ def print_total_dist():
 		velocity[np.abs(velocity) > 1e-3] = 0.
 
 	total_dist = simps(np.abs(velocity.flatten()), hasPointsTime.flatten())
-#	print total_dist
 	return total_dist
 
 def plot_total_dist():
@@ -190,7 +189,6 @@ def print_mean_sq_velocity():
                 velocity[np.abs(velocity) > 1e-3] = 0.
 
 	mean_sq_vel = np.mean(velocity.flatten()**2.)
-#	print mean_sq_vel
 	return mean_sq_vel
 
 def plot_mean_sq_velocity():
@@ -206,8 +204,27 @@ def plot_mean_sq_velocity():
         pl.show()
         return 0
 
+def print_mean_abs_acorr():
+	mean_abs_acorr = np.mean(np.abs(acorr))
+	return mean_abs_acorr
+
+
+def plot_mean_abs_acorr():
+	#these are from running print_mean_abs_acorr() on the 3 datasets.
+        mean_abs_acorr_1 = 0.2799302884948854 
+        mean_abs_acorr_2 = 0.33154930566658963 
+        mean_abs_acorr_3 = 0.33321674499900966 
+        mean_abs_acorr_array = [mean_abs_acorr_1, mean_abs_acorr_2, mean_abs_acorr_3]
+        label_array = ['Day 1', 'Day 3', 'Day 5']
+        pl.bar(np.arange(len(mean_abs_acorr_array)), mean_abs_acorr_array)
+        pl.xticks(np.arange(len(label_array)), label_array)
+        pl.ylabel('$$\\mathrm{Mean~Abs~acorr~} \\langle |acorr| \\rangle$$')
+        pl.show()
+        return 0
+
 #plot_2D_arrays()
 #principal_comp_plots()
 #print_total_dist()
 #plot_total_dist()
 #plot_mean_sq_velocity()
+plot_mean_abs_acorr()
