@@ -116,7 +116,7 @@ if(mode == TRAIN_MODEL):
 
 
 	model = Sequential()
-	model.add(GaussianNoise(0.01, input_shape=input_shape))
+#	model.add(GaussianNoise(0.025, input_shape=input_shape))
 #        model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
 #                         activation='relu'))
 	model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
@@ -127,7 +127,7 @@ if(mode == TRAIN_MODEL):
 #	model.add(MaxPooling2D(pool_size=(2, 2)))
 	model.add(Flatten())
 #	model.add(Dense(128, activation='sigmoid'))
-#	model.add(Dropout(0.05))
+	model.add(Dropout(0.01))
 	model.add(Dense(64, activation='sigmoid'))
 	model.add(Dense(num_classes, activation='sigmoid'))
 	

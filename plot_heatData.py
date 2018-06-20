@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw
 import subprocess
 from scipy.integrate import simps
 
-CHOOSE_DATASET = 3
+CHOOSE_DATASET = 2
 
 #load in .mat file as python dictionary
 if(CHOOSE_DATASET == 1):
@@ -155,7 +155,7 @@ def principal_comp_plots():
 	pc_sqs = [pc1_sq_sum, pc2_sq_sum, pc3_sq_sum[0]]
 	pl.bar(np.arange(len(pc_sqs)), pc_sqs)
 	pl.xticks(np.arange(len(pc_sqs)), labels)
-	pl.ylabel('Weighted Sum of Principal Component')
+	pl.ylabel('$$\\mathrm{Weighted~Sum~of~} |\\mathrm{Principal~Component}|$$')
 	pl.show()
 
 	return 0
@@ -222,9 +222,8 @@ def plot_mean_abs_acorr():
         pl.show()
         return 0
 
-#plot_2D_arrays()
-#principal_comp_plots()
-#print_total_dist()
-#plot_total_dist()
-#plot_mean_sq_velocity()
+plot_2D_arrays()
+principal_comp_plots()
+plot_total_dist()
+plot_mean_sq_velocity()
 plot_mean_abs_acorr()
