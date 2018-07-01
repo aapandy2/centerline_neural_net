@@ -2,7 +2,7 @@
 import keras
 import scipy.io
 from keras.layers import Dense, Flatten, GaussianNoise
-from keras.layers import Conv2D, MaxPooling2D, Dropout
+from keras.layers import Conv2D, Conv2DTranspose, MaxPooling2D, Dropout
 from keras.models import Sequential
 from keras.models import load_model
 from PIL import Image, ImageDraw
@@ -18,10 +18,13 @@ model_name = 'retrained_model.h5'
 #load in .mat file as python dictionary
 frames_directory1 = '/scratch/gpfs/apandya/cam1_frames_resized/'
 frames_directory2 = '/scratch/gpfs/apandya/cam1_frames_resized2/'
-frames_directory3 = '/scratch/gpfs/apandya/cam1_frames_resized3/'
-frames_directory_test = '/scratch/gpfs/apandya/cam1_frames_resized_test/'
+#frames_directory3 = '/scratch/gpfs/apandya/cam1_frames_resized3/'
+#frames_directory_test = '/scratch/gpfs/apandya/cam1_frames_resized_test/'
+frames_directory_test = '/scratch/gpfs/apandya/cam1_frames_resized3/'
+frames_directory3 = '/scratch/gpfs/apandya/cam1_frames_resized_test/'
+frames_directory4 = '/scratch/gpfs/apandya/cam1_frames_resized4/'
 
-num_classes = 20
+num_classes = 10
 
 #define a function which loads images and centerlines into an array;
 #the array has shape (image_array, centerline_array), where both
@@ -63,8 +66,16 @@ def load_images(frames_directory, num_images_to_load, first_image_index, step):
                 #and scale both image and coords to be in range [0, 1]
                 #(all neurons in net have range [0, 1])
                 img_loaded = Image.open(frame)
-                coords_flattened = np.array(coords_np[1::(100/(num_classes/2))]).flatten() / 300.
-		img_flattened    = np.array(img_loaded).flatten() / 255.
+                
+		#do some elementary image enhancement
+                img_loaded = np.array(img_loaded) / np.mean(img_loaded) * 0.25
+                img_loaded[img_loaded < 0.1] = 0.
+                img_loaded[img_loaded > 1.] = 1.
+
+		#flatten arrays
+		coords_flattened = np.array(coords_np[1::(100/(num_classes/2))]).flatten() / 300.
+#		img_flattened    = np.array(img_loaded).flatten() / 255.
+		img_flattened    = img_loaded.flatten()
 
                 #reshape flattened coords array to be 1D columns (net input format)
                 coords_flattened = np.reshape(coords_flattened, (1, num_classes))
@@ -78,30 +89,41 @@ def load_images(frames_directory, num_images_to_load, first_image_index, step):
 
 #load num_images_to_load, stepping through by step, starting at 
 #first_image_index
-total_images = 27000+42000+24000
 step = 10
-first_image_index = 0
+first_image_index = 5
 
 #training parameters
 batch_size = 1
-epochs = 10
+epochs = 5
 
 # input image dimensions
 img_x, img_y = 300, 300
 
+def combine_training_data(num_training_sets):
+
+	size_array = [27000, 42000, 24000, 15000]
+	direc_array = [frames_directory1, frames_directory2, frames_directory3, frames_directory4]
+
+	combined_imgs, combined_centerlines = load_images(direc_array[0], size_array[0], first_image_index, step)
+	
+	for i in range(1, num_training_sets):
+		tdata = load_images(direc_array[i], size_array[i], first_image_index, step)
+		combined_imgs = np.append(combined_imgs, tdata[0])
+		combined_centerlines = np.append(combined_centerlines, tdata[1])	
+		
+
+	total_images = np.sum(size_array[0:num_training_sets]) / step
+	print 'total_images', total_images
+#
+        combined_imgs = np.reshape(combined_imgs, (total_images, img_x, img_y))
+        combined_centerlines = np.reshape(combined_centerlines, (total_images, num_classes))
+
+	combined_array = [combined_imgs, combined_centerlines]
+	return combined_array
+
+
 if(mode == TRAIN_MODEL):
-	training_data1 = load_images(frames_directory1, 27000, first_image_index, step)
-	training_data2 = load_images(frames_directory2, 42000, first_image_index, step)
-        training_data3 = load_images(frames_directory2, 24000, first_image_index, step)
-
-	combined_imgs = np.append(training_data1[0], training_data2[0])
-	combined_centerlines = np.append(training_data1[1], training_data2[1])
-
-	combined_imgs = np.append(combined_imgs, training_data3[0])
-	combined_centerlines = np.append(combined_centerlines, training_data3[1])
-
-	combined_imgs = np.reshape(combined_imgs, (np.shape(training_data1[0])[0] + np.shape(training_data2[0])[0] + np.shape(training_data3[0])[0], img_x, img_y))
-	combined_centerlines = np.reshape(combined_centerlines, (np.shape(training_data1[0])[0] + np.shape(training_data2[0])[0] + np.shape(training_data3[0])[0], num_classes))
+	combined_imgs, combined_centerlines = combine_training_data(4)
 
 	x_train = combined_imgs
 	y_train = combined_centerlines
@@ -116,20 +138,27 @@ if(mode == TRAIN_MODEL):
 
 
 	model = Sequential()
-#	model.add(GaussianNoise(0.025, input_shape=input_shape))
+#	model.add(GaussianNoise(0.01, input_shape=input_shape))
 #        model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
 #                         activation='relu'))
 	model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
 	                 activation='relu',
 	                 input_shape=input_shape))
-	model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-#	model.add(Conv2D(32, kernel_size=(3, 3), activation='relu'))
-#	model.add(MaxPooling2D(pool_size=(2, 2)))
+#	model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+	model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
+#        model.add(MaxPooling2D(pool_size=(2, 2)))
+	model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
+	model.add(MaxPooling2D(pool_size=(2, 2)))
+	model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
+#        model.add(MaxPooling2D(pool_size=(2, 2)))
+	model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
+#        model.add(MaxPooling2D(pool_size=(2, 2)))
+	model.add(Conv2DTranspose(64, kernel_size=(3,3), activation='relu'))
 	model.add(Flatten())
 #	model.add(Dense(128, activation='sigmoid'))
-	model.add(Dropout(0.01))
-	model.add(Dense(64, activation='sigmoid'))
-	model.add(Dense(num_classes, activation='sigmoid'))
+#	model.add(Dropout(0.01))
+#	model.add(Dense(64, activation='sigmoid'))
+	model.add(Dense(num_classes, activation='relu'))
 	
 	model.compile(loss=keras.losses.binary_crossentropy,
 	              optimizer=keras.optimizers.Adam())
@@ -157,22 +186,7 @@ if(mode == TRAIN_MODEL):
 
 
 if(mode == TRAIN_LOADED_MODEL):
-	training_data1 = load_images(frames_directory1, 27000, first_image_index, step)
-	training_data2 = load_images(frames_directory2, 42000, first_image_index, step)
-        training_data3 = load_images(frames_directory2, 24000, first_image_index, step)
-
-#
-        combined_imgs = np.append(training_data1[0], training_data2[0])
-        combined_centerlines = np.append(training_data1[1], training_data2[1])
-#
-#        combined_imgs = np.reshape(combined_imgs, (np.shape(training_data1[0])[0] + np.shape(training_data2[0])[0], img_x, img_y))
-#        combined_centerlines = np.reshape(combined_centerlines, (np.shape(training_data1[0])[0] + np.shape(training_data2[0])[0], num_classes))
-	
-	combined_imgs = np.append(combined_imgs, training_data3[0])
-        combined_centerlines = np.append(combined_centerlines, training_data3[1])
-
-        combined_imgs = np.reshape(combined_imgs, (np.shape(training_data1[0])[0] + np.shape(training_data2[0])[0] + np.shape(training_data3[0])[0], img_x, img_y))
-        combined_centerlines = np.reshape(combined_centerlines, (np.shape(training_data1[0])[0] + np.shape(training_data2[0])[0] + np.shape(training_data3[0])[0], num_classes))
+	combined_imgs, combined_centerlines = combine_training_data(4)
 
 	x_train = combined_imgs
         y_train = combined_centerlines
@@ -214,18 +228,7 @@ if(mode == LOAD_MODEL):
 	# Returns a compiled model identical to the previous one
 	model = load_model(model_name)
 
-#	training_data1 = load_images(frames_directory1, 27000, 0, step)
-#        training_data2 = load_images(frames_directory2, 42000, 0, step)
-#
-#        combined_imgs = np.append(training_data1[0], training_data2[0])
-#        combined_centerlines = np.append(training_data1[1], training_data2[1])
-#
-#        combined_imgs = np.reshape(combined_imgs, (np.shape(training_data1[0])[0] + np.shape(training_data2[0])[0], img_x, img_y))
-#        combined_centerlines = np.reshape(combined_centerlines, (np.shape(training_data1[0])[0] + np.shape(training_data2[0])[0], num_classes))
-#
-#	x_test = combined_imgs
-#        y_test = combined_centerlines
-	num_test_images = 32000
+	num_test_images = 43000
 	test_step       = 500
 
 	x_test, y_test = load_images(frames_directory_test, num_test_images, 0, test_step)
