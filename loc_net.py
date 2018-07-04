@@ -13,7 +13,7 @@ import pylab as pl
 TRAIN_MODEL        = 0
 LOAD_MODEL         = 1
 TRAIN_LOADED_MODEL = 2
-mode = TRAIN_MODEL
+mode = LOAD_MODEL
 model_name = 'retrained_loc_model.h5'
 
 #load in .mat file as python dictionary
@@ -170,14 +170,15 @@ if(mode == TRAIN_MODEL):
 	model = Sequential()
 	model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
 	                 activation='relu',
-	                 input_shape=input_shape))
+	                 input_shape=input_shape,
+			 kernel_initializer='random_uniform'))
 	model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
 	model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
 			 activation='relu',))
         model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-#	model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
-#                         activation='relu'))
-#        model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+	model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
+                         activation='relu'))
+        model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
 #	model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
 #                         activation='relu'))
 #        model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
@@ -263,7 +264,7 @@ if(mode == LOAD_MODEL):
 	num_test_images = 15000
 	test_step       = 100
 
-	x_test, y_test = load_images(frames_directory3, num_test_images, 0, test_step)
+	x_test, y_test = load_images(frames_directory4, num_test_images, 0, test_step)
 
 	x_test = x_test.astype('float32')
 	x_test  = x_test.reshape(x_test.shape[0], img_x, img_y, 1)
@@ -297,7 +298,7 @@ if(mode == LOAD_MODEL):
 		true_ans = y_test[test_image].reshape(num_x_bins, num_y_bins) #TODO: reverse x and y?
 		net_ans  = predictions[test_image].reshape(num_x_bins, num_y_bins)
 
-		print 'diff:', (net_ans - true_ans)
+		print 'net:', net_ans, 'true:', true_ans
 
 		bin_img = Image.fromarray(net_ans)
 	        bin_img = bin_img.resize((300,300))
