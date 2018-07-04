@@ -13,7 +13,7 @@ import pylab as pl
 TRAIN_MODEL        = 0
 LOAD_MODEL         = 1
 TRAIN_LOADED_MODEL = 2
-mode = LOAD_MODEL
+mode = TRAIN_MODEL
 model_name = 'retrained_loc_model.h5'
 
 #load in .mat file as python dictionary
@@ -109,12 +109,12 @@ def load_images(frames_directory, num_images_to_load, first_image_index, step):
 
 #load num_images_to_load, stepping through by step, starting at 
 #first_image_index
-step = 50
+step = 100
 first_image_index = 0
 
 #training parameters
 batch_size = 1
-epochs = 25
+epochs = 50
 
 # input image dimensions
 img_x, img_y = 300, 300
@@ -152,7 +152,7 @@ def combine_training_data(num_training_sets):
 #	pl.show()
 
 if(mode == TRAIN_MODEL):
-	combined_imgs, combined_centerlines = combine_training_data(1)
+	combined_imgs, combined_centerlines = combine_training_data(3)
 
 	x_train = combined_imgs
 	y_train = combined_centerlines
@@ -264,10 +264,10 @@ if(mode == LOAD_MODEL):
 	# Returns a compiled model identical to the previous one
 	model = load_model(model_name)
 
-	num_test_images = 27000
+	num_test_images = 15000
 	test_step       = 100
 
-	x_test, y_test = load_images(frames_directory1, num_test_images, 0, test_step)
+	x_test, y_test = load_images(frames_directory3, num_test_images, 0, test_step)
 
 	x_test = x_test.astype('float32')
 	x_test  = x_test.reshape(x_test.shape[0], img_x, img_y, 1)
@@ -287,8 +287,10 @@ if(mode == LOAD_MODEL):
 		test_image = np.random.randint(low=0, high= int(num_test_images/test_step) )
 		
 		#retrieve image from array and convert it to color to draw colored centerline
-		img = Image.fromarray(np.reshape(x_test[test_image], (300, 300)) * 255).convert('RGBA')
-		draw = ImageDraw.Draw(img)
+#		img = Image.fromarray(np.reshape(x_test[test_image], (300, 300)) * 255).convert('RGBA')
+#		draw = ImageDraw.Draw(img)
+	        img_reshaped = np.reshape(x_test[test_image], (300, 300)) * 255
+	
 		
 		#generate net centerline and retrieve "true" centerline from array 
 		#and convert them to tuples of (x, y) tuples for draw.line() below
@@ -299,8 +301,17 @@ if(mode == LOAD_MODEL):
 		true_ans = y_test[test_image].reshape(num_x_bins, num_y_bins) #TODO: reverse x and y?
 		net_ans  = predictions[test_image].reshape(num_x_bins, num_y_bins)
 
-		print true_ans
-		print net_ans
+		print 'diff:', (net_ans - true_ans)
+
+		bin_img = Image.fromarray(net_ans)
+	        bin_img = bin_img.resize((300,300))
+
+	        pl.contourf(bin_img, alpha=0.2, cmap='Blues')
+	        pl.imshow(img_reshaped, cmap='gray')
+	        pl.show()
+
+#		print true_ans
+#		print net_ans
 
 #		true_coords_array = np.array(true_coords_tuple)
 
