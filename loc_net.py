@@ -7,13 +7,14 @@ from keras.models import Sequential
 from keras.models import load_model
 from PIL import Image, ImageDraw
 import numpy as np
+import pylab as pl
 
 #choose whether to train new model or load existing model
 TRAIN_MODEL        = 0
 LOAD_MODEL         = 1
 TRAIN_LOADED_MODEL = 2
 mode = LOAD_MODEL
-model_name = 'retrained_model.h5'
+model_name = 'retrained_loc_model.h5'
 
 #load in .mat file as python dictionary
 frames_directory1 = '/scratch/network/apandya/cam1_frames_resized/'
@@ -25,7 +26,23 @@ frames_directory3 = '/scratch/network/apandya/cam1_frames_resized_test/'
 frames_directory4 = '/scratch/network/apandya/cam1_frames_resized4/'
 frames_directory5 = '/scratch/network/apandya/cam1_frames_resized5/'
 
-num_classes = 10
+#num_classes = 10
+
+num_x_bins = 3
+num_y_bins = 3
+
+def generate_bin_array(centerline_array):
+        true_coords_array = centerline_array.astype(int)
+
+        box_array = np.zeros((num_x_bins, num_y_bins))
+        x_bin = 0
+        y_bin = 0
+        for point in true_coords_array:
+                x_bin = point[0] / (300/num_x_bins)
+                y_bin = point[1] / (300/num_y_bins)
+                box_array[y_bin, x_bin] += 1
+
+        return box_array
 
 #define a function which loads images and centerlines into an array;
 #the array has shape (image_array, centerline_array), where both
@@ -63,6 +80,8 @@ def load_images(frames_directory, num_images_to_load, first_image_index, step):
                 coords_np = np.array(coords)
                 coords_np = coords_np * img_scaling_factor
 
+		bin_array = generate_bin_array(coords_np)
+
                 #load image and convert to array, flatten array, 
                 #and scale both image and coords to be in range [0, 1]
                 #(all neurons in net have range [0, 1])
@@ -74,15 +93,15 @@ def load_images(frames_directory, num_images_to_load, first_image_index, step):
                 img_loaded[img_loaded > 1.] = 1.
 
 		#flatten arrays
-		coords_flattened = np.array(coords_np[1::(100/(num_classes/2))]).flatten() / 300.
-#		img_flattened    = np.array(img_loaded).flatten() / 255.
+#		coords_flattened = np.array(coords_np[1::(100/(num_classes/2))]).flatten() / 300.
 		img_flattened    = img_loaded.flatten()
 
                 #reshape flattened coords array to be 1D columns (net input format)
-                coords_flattened = np.reshape(coords_flattened, (1, num_classes))
+#                coords_flattened = np.reshape(coords_flattened, (1, num_classes))
+		bin_array_flattened = np.reshape(bin_array, (1, num_x_bins*num_y_bins)) / 100. #TODO:remove this
 
                 image_data.append(img_flattened)
-                coords_data.append(coords_flattened[0])
+                coords_data.append(bin_array_flattened[0])
 
         combined_data = [np.array(image_data).reshape((num_images_to_load/step, 300, 300)), np.array(coords_data)]
 
@@ -90,12 +109,12 @@ def load_images(frames_directory, num_images_to_load, first_image_index, step):
 
 #load num_images_to_load, stepping through by step, starting at 
 #first_image_index
-step = 10
+step = 50
 first_image_index = 0
 
 #training parameters
 batch_size = 1
-epochs = 10
+epochs = 25
 
 # input image dimensions
 img_x, img_y = 300, 300
@@ -117,14 +136,23 @@ def combine_training_data(num_training_sets):
 	print 'total_images', total_images
 #
         combined_imgs = np.reshape(combined_imgs, (total_images, img_x, img_y))
-        combined_centerlines = np.reshape(combined_centerlines, (total_images, num_classes))
+        combined_centerlines = np.reshape(combined_centerlines, (total_images, num_x_bins*num_y_bins))
 
 	combined_array = [combined_imgs, combined_centerlines]
 	return combined_array
 
+#combined_imgs, combined_centerlines = combine_training_data(1)
+#for i in range(10):
+#	bin_img = Image.fromarray(combined_centerlines[i].reshape((num_x_bins, num_y_bins)))
+#	print combined_centerlines[i].reshape((num_x_bins, num_y_bins))
+#	bin_img = bin_img.resize((300,300))
+#	
+#	pl.contourf(bin_img, alpha=0.2, cmap='jet')
+#	pl.imshow(combined_imgs[i], cmap='gray')
+#	pl.show()
 
 if(mode == TRAIN_MODEL):
-	combined_imgs, combined_centerlines = combine_training_data(5)
+	combined_imgs, combined_centerlines = combine_training_data(1)
 
 	x_train = combined_imgs
 	y_train = combined_centerlines
@@ -136,40 +164,41 @@ if(mode == TRAIN_MODEL):
 	
 	x_train = x_train.reshape(x_train.shape[0], img_x, img_y, 1)
 	input_shape = (img_x, img_y, 1)	
-
+#	x_train = x_train.reshape(x_train.shape[0], img_x*img_y, 1)
+#	input_shape = (img_x*img_y, 1)
 
 	model = Sequential()
 #	model.add(GaussianNoise(0.01, input_shape=input_shape))
-	model.add(Conv2D(4, kernel_size=(3, 3), strides=(2, 2),
+#	model.add(Dense(64, activation='sigmoid', input_shape=input_shape))
+#	model.add(Dense(32, activation='sigmoid'))
+#	model.add(Dense(16, activation='sigmoid'))
+	model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
 	                 activation='relu',
 	                 input_shape=input_shape))
 	model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-#        model.add(Conv2DTranspose(64, kernel_size=(3,3), activation='relu'))
-#	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Conv2D(4, kernel_size=(3, 3), activation='relu'))
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Conv2D(4, kernel_size=(3, 3), activation='relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Conv2D(4, kernel_size=(3, 3), activation='relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-#	model.add(Conv2DTranspose(64, kernel_size=(3,3), activation='relu'))
-#        model.add(Conv2DTranspose(64, kernel_size=(3,3), activation='relu'))
-#        model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
-#        model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
-#        model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
-#        model.add(MaxPooling2D(pool_size=(2, 2)))
-#	model.add(GlobalMaxPooling2D())
+	model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
+			 activation='relu',))
+        model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+#	model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
+#                         activation='relu'))
+#        model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+#	model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
+#                         activation='relu'))
+#        model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
 	model.add(Flatten())
-#	model.add(Dense(128, activation='relu'))
-#	model.add(Dense(128, activation='relu'))
-#	model.add(Dropout(0.01))
-#	model.add(Dense(64, activation='sigmoid'))
-#	model.add(Dense(num_classes, activation='relu'))
-	model.add(Dense(num_classes))
+#	model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+#	model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
+#	model.add(MaxPooling2D(pool_size=(2, 2)))
+#	model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
+#        model.add(MaxPooling2D(pool_size=(2, 2)))
+#	model.add(Flatten())
+	model.add(Dense(num_x_bins*num_y_bins, activation='sigmoid'))
 	
-	model.compile(loss=keras.losses.binary_crossentropy,
+#	model.compile(loss=keras.losses.binary_crossentropy,
+	model.compile(loss=keras.losses.mean_squared_error,
+#	model.compile(loss=keras.losses.categorical_crossentropy,
 	              optimizer=keras.optimizers.Adam())
-	#	      optimizer=keras.optimizers.SGD(lr=0.30))
+#		      optimizer=keras.optimizers.SGD(lr=0.30))
 	
 	
 	class AccuracyHistory(keras.callbacks.Callback):
@@ -235,18 +264,20 @@ if(mode == LOAD_MODEL):
 	# Returns a compiled model identical to the previous one
 	model = load_model(model_name)
 
-	num_test_images = 25000
+	num_test_images = 27000
 	test_step       = 100
 
-	x_test, y_test = load_images(frames_directory_test, num_test_images, 0, test_step)
+	x_test, y_test = load_images(frames_directory1, num_test_images, 0, test_step)
 
 	x_test = x_test.astype('float32')
-	x_test  = x_test.reshape(x_test.shape[0], img_x, img_y, 1)	
+	x_test  = x_test.reshape(x_test.shape[0], img_x, img_y, 1)
+#	x_test  = x_test.reshape(x_test.shape[0], img_x*img_y, 1)
 
+#	print y_test[0].reshape((5,5))
 
 	num_test_sample_images = 10
 	
-	predictions = np.array(model.predict(x_test)) * 300.
+	predictions = np.array(model.predict(x_test)) #* 300.
 	
 	#pulls num_test_sample_images from test_data, draws both predicted line (blue)
 	#and known centerline (red)
@@ -261,18 +292,29 @@ if(mode == LOAD_MODEL):
 		
 		#generate net centerline and retrieve "true" centerline from array 
 		#and convert them to tuples of (x, y) tuples for draw.line() below
-		net_coords_tuple = tuple(map(tuple, np.reshape(predictions[test_image], (num_classes/2, 2))))
-		net_coords_tuple = tuple(map(tuple, np.reshape(np.array(model.predict(x_test))[test_image] * 300., (num_classes/2, 2))))
-		true_coords_tuple = tuple(map(tuple, np.reshape(np.array(y_test[test_image])*300., (num_classes/2, 2))))
+#		net_coords_tuple = tuple(map(tuple, np.reshape(predictions[test_image], (num_classes/2, 2))))
+#		net_coords_tuple = tuple(map(tuple, np.reshape(np.array(model.predict(x_test))[test_image] * 300., (num_classes/2, 2))))
+#		true_coords_tuple = tuple(map(tuple, np.reshape(np.array(y_test[test_image])*300., (200/2, 2))))
+
+		true_ans = y_test[test_image].reshape(num_x_bins, num_y_bins) #TODO: reverse x and y?
+		net_ans  = predictions[test_image].reshape(num_x_bins, num_y_bins)
+
+		print true_ans
+		print net_ans
+
+#		true_coords_array = np.array(true_coords_tuple)
+
+#		print generate_bin_array(true_coords_array)
+#		print predictions[test_image]
 		
 		#draw net centerline and "true" centerline on test image and show image
-		if(num_classes > 2):
-			draw.line(net_coords_tuple, fill=(0, 0, 255), width=2)
-			draw.line(true_coords_tuple, fill=(255, 0, 0), width=2)
-		#	img.show()
-			img.save('output_' + str(k) + '.png')
-		else:
-			print 'right ans:', true_coords_tuple, 'net ans:', net_coords_tuple
+#		if(num_classes > 2):
+#			draw.line(net_coords_tuple, fill=(0, 0, 255), width=2)
+#			draw.line(true_coords_tuple, fill=(255, 0, 0), width=2)
+#		#	img.show()
+#			img.save('output_' + str(k) + '.png')
+#		else:
+#			print 'right ans:', true_coords_tuple, 'net ans:', net_coords_tuple
 
 #clear the data tensorflow saves about old models
 import tensorflow as tf
