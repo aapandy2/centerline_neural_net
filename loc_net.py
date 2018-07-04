@@ -28,8 +28,8 @@ frames_directory5 = '/scratch/network/apandya/cam1_frames_resized5/'
 
 #num_classes = 10
 
-num_x_bins = 3
-num_y_bins = 3
+num_x_bins = 6
+num_y_bins = 6
 
 def generate_bin_array(centerline_array):
         true_coords_array = centerline_array.astype(int)
@@ -114,7 +114,7 @@ first_image_index = 0
 
 #training parameters
 batch_size = 1
-epochs = 50
+epochs = 20
 
 # input image dimensions
 img_x, img_y = 300, 300
@@ -168,10 +168,6 @@ if(mode == TRAIN_MODEL):
 #	input_shape = (img_x*img_y, 1)
 
 	model = Sequential()
-#	model.add(GaussianNoise(0.01, input_shape=input_shape))
-#	model.add(Dense(64, activation='sigmoid', input_shape=input_shape))
-#	model.add(Dense(32, activation='sigmoid'))
-#	model.add(Dense(16, activation='sigmoid'))
 	model.add(Conv2D(64, kernel_size=(3, 3), strides=(2, 2),
 	                 activation='relu',
 	                 input_shape=input_shape))
