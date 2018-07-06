@@ -255,7 +255,7 @@ if(mode == LOAD_MODEL):
 
 	num_test_sample_images = 10
 	
-	predictions = np.array(model.predict(x_test)) #* 300.
+	predictions = np.array(model.predict(x_test))
 	
 	#pulls num_test_sample_images from test_data, draws both predicted line (blue)
 	#and known centerline (red)
@@ -277,8 +277,8 @@ if(mode == LOAD_MODEL):
 	        bin_img = bin_img.resize((300,300))
 
 	        pl.contourf(bin_img, alpha=0.25, cmap='gnuplot')
-	        pl.imshow(img_reshaped, cmap='gray')
 		pl.colorbar()
+	        pl.imshow(img_reshaped, cmap='gray')
 	        pl.show()
 
 #clear the data tensorflow saves about old models
