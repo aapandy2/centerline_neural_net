@@ -105,12 +105,12 @@ def load_images(frames_directory, num_images_to_load, first_image_index, step):
 
 #load num_images_to_load, stepping through by step, starting at 
 #first_image_index
-step = 20
+step = 10
 first_image_index = 0
 
 #training parameters
 batch_size = 1
-epochs = 20
+epochs = 17
 
 # input image dimensions
 img_x, img_y = 300, 300
@@ -278,6 +278,7 @@ if(mode == LOAD_MODEL):
 
 	        pl.contourf(bin_img, alpha=0.25, cmap='gnuplot')
 	        pl.imshow(img_reshaped, cmap='gray')
+		pl.colorbar()
 	        pl.show()
 
 #clear the data tensorflow saves about old models
