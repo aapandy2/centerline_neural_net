@@ -16,15 +16,17 @@ mode = LOAD_MODEL
 model_name = 'retrained_loc_model.h5'
 
 #load in .mat file as python dictionary
-frames_directory1 = '/scratch/network/apandya/cam1_frames_resized/'
-frames_directory2 = '/scratch/network/apandya/cam1_frames_resized2/'
-#frames_directory3 = '/scratch/network/apandya/cam1_frames_resized3/'
-#frames_directory_test = '/scratch/network/apandya/cam1_frames_resized_test/'
-frames_directory_test = '/scratch/network/apandya/cam1_frames_resized3/'
-frames_directory3 = '/scratch/network/apandya/cam1_frames_resized_test/'
-frames_directory4 = '/scratch/network/apandya/cam1_frames_resized4/'
-frames_directory5 = '/scratch/network/apandya/cam1_frames_resized5/'
-frames_directory6 = '/scratch/network/apandya/cam1_frames_resized6/'
+#frames_directory1 = '/scratch/network/apandya/cam1_frames_resized/'
+#frames_directory2 = '/scratch/network/apandya/cam1_frames_resized2/'
+##frames_directory3 = '/scratch/network/apandya/cam1_frames_resized3/'
+##frames_directory_test = '/scratch/network/apandya/cam1_frames_resized_test/'
+#frames_directory_test = '/scratch/network/apandya/cam1_frames_resized3/'
+#frames_directory3 = '/scratch/network/apandya/cam1_frames_resized_test/'
+#frames_directory4 = '/scratch/network/apandya/cam1_frames_resized4/'
+#frames_directory5 = '/scratch/network/apandya/cam1_frames_resized5/'
+#frames_directory6 = '/scratch/network/apandya/cam1_frames_resized6/'
+
+frames_directory_test = '../sample_test_frames/'
 
 num_x_bins = 15
 num_y_bins = 15
@@ -245,10 +247,10 @@ if(mode == LOAD_MODEL):
 	# Returns a compiled model identical to the previous one
 	model = load_model(model_name)
 
-	num_test_images = 15000
-	test_step       = 100
+	num_test_images = 1000
+	test_step       = 10
 
-	x_test, y_test = load_images(frames_directory6, num_test_images, 0, test_step)
+	x_test, y_test = load_images(frames_directory_test, num_test_images, 0, test_step)
 
 	x_test = x_test.astype('float32')
 	x_test  = x_test.reshape(x_test.shape[0], img_x, img_y, 1)
